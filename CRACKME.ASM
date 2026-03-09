@@ -7,9 +7,10 @@ locals @@
 
 ;---------------------------------- CONSTANTS ---------------------------------
 
-CR					equ 0dh			; \r
-CRLF				equ 0dh, 0ah	; \r \n
-INPUT_BUFFER_SIZE	equ	256
+CR						equ 0dh			; \r
+CRLF					equ 0dh, 0ah	; \r \n
+INPUT_BUFFER_SIZE		equ	256d
+MAX_READ_FILE_LENGTH 	equ 0FFFFh
 
 ;--------------------------------------------------------------------------------
 
@@ -73,13 +74,16 @@ GetConsoleInput proc
 	mov ah, 03fh
 	; BX = standard console input
 	xor bx, bx
-	; CX = FFFFh --> maximum value --> buffer length
-	xor cx, cx
-	dec cx
+	; CX = maximum value to read --> buffer length
+	mov cx, MAX_READ_FILE_LENGTH
 	; DS:[DX] --> input buffer
 	mov dx, offset InputBuffer
 	; DOS function interrupt
+	mov si, sp
+	mov sp, offset EnterPasswordMsg
+	sub sp, 2
 	int 21h
+	mov sp, si
 
 	ret
 
@@ -121,8 +125,8 @@ StrLen endp
 
 ;--------------------------------------------------------------------------------
 ; Short:   Verifies input password and returns the result
-; Exp:     CS:[Password] --> actual password
-; In:      DS:[SI] 	     --> input password
+; Exp:     CS:[PasswordHash] --> actual password hash
+; In:      DS:[SI] --> input password
 ; Out:     AL = 00h if password is correct
 ;		   AL = 01h if password was denied
 ; Destroy: AH, BX, CX, SI, DI
@@ -138,7 +142,7 @@ VerifyPassword proc
 	xor ax, ax
 
 	; CS:[DX] = actual password hash
-	mov di, offset Password
+	mov di, offset PasswordHash
 
 	; cmp password hash and input hash
 	cmp word ptr bx, cs:[di]
@@ -179,7 +183,7 @@ CountHash proc
 	; remember hash to than add once
 	mov ax, bx
 	; hash = hash * 33
-	shr bx, 5
+	shl bx, 5
 	add bx, ax
 	; hash += character
 	; restore AX = 00h
@@ -253,6 +257,8 @@ Exit endp
 
 .data
 
+StackAreaForInt		dw 90 DUP(256)
+
 EnterPasswordMsg	db 'Enter password: $'
 AccessGrantedMsg	db 'Access granted', CRLF, '$'
 AccessDeniedMsg		db 'Access denied',  CRLF, '$'
@@ -262,10 +268,10 @@ AccessDeniedMsg		db 'Access denied',  CRLF, '$'
 ; и буфер не проверяется на переполнение --> правильным вводом
 ; можно переписать значение хэша правильного пароля на свое
 
-InputBuffer			db INPUT_BUFFER_SIZE DUP('$')
+InputBuffer			db INPUT_BUFFER_SIZE DUP(01h)
 
-; password hash == 0293h (KusKus)
-Password			dw 0293h
+; password hash == 7846h ("KusKus")
+PasswordHash		dw 7846h
 
 ;--------------------------------------------------------------------------------
 
