@@ -23,12 +23,22 @@ Start:
 
 Main proc
 
+	; DS = CS
+	mov ax, cs
+	mov ds, ax
+
+	; DS:[DX] --> EnterPassword message
+	mov dx, offset EnterPasswordMsg
+	; call DOS func DisplayString
+	; AH = 09h = function code
+	mov ah, 09h
+	; DOS func interrupt
+	int 21h
+
 	; get password from console
 	call GetConsoleInput
 
 	; DS:[SI] --> password
-	mov ax, cs
-	mov ds, ax
 	mov si, offset InputBuffer
 	; CX = password len
 	call VerifyPassword
@@ -212,9 +222,13 @@ Exit endp
 
 .data
 
+EnterPasswordMsg	db 'Enter password: $'
 AccessGrantedMsg	db 'Access granted', CRLF, '$'
 AccessDeniedMsg		db 'Access denied',  CRLF, '$'
 
+; 1ая уязвимость --> хэш лежит сразу после буфера ввода
+; и буфер не проверяется на переполнение --> правильным вводом
+; можно переписать значение хэша правильного пароля на свое
 InputBuffer			db INPUT_BUFFER_SIZE DUP('$')
 
 ; password hash == 0266h (KusKus)
