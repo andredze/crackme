@@ -132,7 +132,7 @@ VerifyPassword proc
 VerifyPassword endp
 
 ;--------------------------------------------------------------------------------
-; Short:   Counts hash for string (algorithm = sum of all chars)
+; Short:   Counts hash for string (algorithm = djb2)
 ; In:      DS:[SI] --> string
 ;		   CX = string len
 ; Out:     BX = hash value
@@ -153,9 +153,17 @@ CountHash proc
 
 	; count BX = sum of symbol codes
 @@Next:
+	; remember hash to than add once
+	mov ax, bx
+	; hash = hash * 33
+	shr bx, 5
+	add bx, ax
+	; hash += character
+	; restore AX = 00h
+	xor ax, ax
 	; AL = DS[SI++]
 	lodsb
-	; BX += AL (symbol ascii code)
+	; hash += AL (symbol ascii code)
 	add bx, ax
 
 	loop @@Next
@@ -231,8 +239,8 @@ AccessDeniedMsg		db 'Access denied',  CRLF, '$'
 ; можно переписать значение хэша правильного пароля на свое
 InputBuffer			db INPUT_BUFFER_SIZE DUP('$')
 
-; password hash == 0266h (KusKus)
-Password			dw 0266h
+; password hash == 0293h (KusKus)
+Password			dw 0293h
 
 ;--------------------------------------------------------------------------------
 
