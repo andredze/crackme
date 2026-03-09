@@ -40,7 +40,12 @@ Main proc
 
 	; DS:[SI] --> password
 	mov si, offset InputBuffer
-	; CX = password len
+	; get CX = string length
+	call StrLen
+
+	; DS:[SI] --> password
+	mov si, offset InputBuffer
+	; get AL = access status
 	call VerifyPassword
 
 	; AL = verification result
@@ -53,48 +58,66 @@ Main endp
 
 ;--------------------------------------------------------------------------------
 ; Short:   Reads input from console until the '\r'
+; Exp:	   DS = CS
 ; Out:     CS:[InputBuffer] --> input
 ;		   CX = input length
-; Destroy: AX, DI, ES
+; Destroy: AX, BX, CX, DX
 ; NOTE:	   This function IS NOT checking input length!!!
 ;		   InputBufferOverflow is not checked!!!
 ;--------------------------------------------------------------------------------
 
 GetConsoleInput proc
 
-	; ES = CS
-	mov ax, cs
-	mov es, ax
-	; ES:[DI] --> input buffer
-	mov di, offset InputBuffer
-
-@@Next:
-	; call DOS function KeyboardInput
-	; AH = function code (01h)
-	mov ah, 01h
+; call DOS function Read from file
+	; AH = DOS function Read from file code
+	mov ah, 03fh
+	; BX = standard console input
+	xor bx, bx
+	; CX = FFFFh --> maximum value --> buffer length
+	xor cx, cx
+	dec cx
+	; DS:[DX] --> input buffer
+	mov dx, offset InputBuffer
 	; DOS function interrupt
 	int 21h
-
-	; AL = character from Standard Input
-	cmp al, CR
-	; if reached \r --> input ended
-	je @@InputEnded
-	; else --> store in buffer
-	; ES:[DI++] = AL
-	stosb
-
-	jmp @@Next
-
-@@InputEnded:
-	; CX = input length
-	; CX = DI - InputBufferStart = -(InputBufferStart - DI)
-	mov cx, offset InputBuffer
-	sub cx, di
-	neg cx
 
 	ret
 
 GetConsoleInput endp
+
+;--------------------------------------------------------------------------------
+; Short:   Counts length of the string until the '\r'
+; In:      DS:[SI] --> string
+; Out:     CX = string length
+; Destroy: AL, SI
+;--------------------------------------------------------------------------------
+
+StrLen proc
+
+	; DF = 0
+	cld
+
+	; CX = FFFFh --> max value
+	xor cx, cx
+	dec cx
+
+@@Next:
+	; AL = DS[SI++]
+	lodsb
+	; if AL = '\r' --> end
+	cmp al, CR
+	loopne @@Next
+
+	; CX = FFFF - len - 1 (-1 for '\r') ==> len = FFFF - CX - 1 = - 2 - CX
+	; - CX
+	neg cx
+	; - 2
+	dec cx
+	dec cx
+
+	ret
+
+StrLen endp
 
 ;--------------------------------------------------------------------------------
 ; Short:   Verifies input password and returns the result
@@ -234,9 +257,11 @@ EnterPasswordMsg	db 'Enter password: $'
 AccessGrantedMsg	db 'Access granted', CRLF, '$'
 AccessDeniedMsg		db 'Access denied',  CRLF, '$'
 
-; 1ая уязвимость --> хэш лежит сразу после буфера ввода
+; 1ая уязвимость --> перезапись переменной Password с хэшом пароля
+; хэш лежит сразу после буфера ввода
 ; и буфер не проверяется на переполнение --> правильным вводом
 ; можно переписать значение хэша правильного пароля на свое
+
 InputBuffer			db INPUT_BUFFER_SIZE DUP('$')
 
 ; password hash == 0293h (KusKus)
