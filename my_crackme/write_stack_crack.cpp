@@ -19,6 +19,7 @@ int main()
         crack_input_data[i] = 0x11;
     }
 
+    // call address --> 0171
     crack_input_data[ARR_SIZE - 2] = 0x7B;
     crack_input_data[ARR_SIZE - 1] = 0x01;
 
