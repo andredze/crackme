@@ -94,10 +94,9 @@
 
 Перенаправив в DOS-е ввод в программу командой
 ```powershell
-crackme.com < status.hex
+crackme.com < status.bin
 ```
 Получим сообщение об успешном вводе пароля
-
 
 ![alt text](assets/image-7.png)
 
@@ -121,7 +120,7 @@ crackme.com < status.hex
 
 ![alt text](assets/image-9.png)
 
-Аналогично получим ожидаемый результат
+Перенаправив ввод из файла *calladdr.bin* получим ожидаемый результат
 
 ![alt text](assets/image-10.png)
 
