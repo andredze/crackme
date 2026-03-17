@@ -1,45 +1,46 @@
 #include "graphics.h"
 #include "crack.h"
 
-//----------------------------------------------------------------------
+//------------------------------------------------------------------//
 
-PatchErr_t MakePatch(Patcher_t* patcher)
+AppErr_t MakePatch(AppCtx_t* app, GraphicsCtx_t* gfx)
 {
-    assert(patcher);
+    assert(app);
+    assert(gfx);
 
-    fprintf(stderr, "Making patch\n");
+    DPRINTF("Making patch\n");
 
-    patcher->fp = fopen(TARGET_FILE, "r+");
+    app->target_file = fopen(TARGET_FILE_NAME, "r+");
 
-    if (patcher->fp == NULL)
+    if (app->target_file == NULL)
     {
-        fprintf(stderr, "Failed to open file %s\n", TARGET_FILE);
-        return PATCH_FILE_ERROR;
+        PRINTERR("Failed to open file %s", TARGET_FILE_NAME);
+        return APP_FILE_ERROR;
     }
 
-    fprintf(stderr, "Opened file\n");
+    DPRINTF("Opened file\n");
 
-    if (fseek(patcher->fp, PATCH_ADDRESS, SEEK_SET) != 0)
+    if (fseek(app->target_file, PATCH_ADDRESS, SEEK_SET) != 0)
     {
-        fprintf(stderr, "fseek for PATCH_ADDRESS failed\n");
-        return PATCH_FILE_ERROR;
+        PRINTERR("fseek for PATCH_ADDRESS failed");
+        return APP_FILE_ERROR;
     }
 
-    fprintf(stderr, "Found byte\n");
+    DPRINTF("Found byte\n");
 
-    if (fwrite(&TWO_NOPS_BYTECODE, 1, 2, patcher->fp) != 2)
+    if (fwrite(&TWO_NOPS_BYTECODE, 1, 2, app->target_file) != 2)
     {
-        fprintf(stderr, "fwrite NOPs failed\n");
-        return PATCH_FILE_ERROR;
+        PRINTERR("fwrite NOPs failed");
+        return APP_FILE_ERROR;
     }
 
-    fprintf(stderr, "Wrote nops\n");
+    DPRINTF("Wrote nops\n");
 
-    fclose(patcher->fp);
+    fclose(app->target_file);
 
-    fprintf(stderr, "Closed file\n");
+    DPRINTF("Closed file\n");
 
-    return PATCH_SUCCESS;
+    return APP_SUCCESS;
 }
 
 //------------------------------------------------------------------//

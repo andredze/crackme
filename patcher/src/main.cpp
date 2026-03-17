@@ -3,29 +3,44 @@
 
 //----------------------------------------------------------------------
 
+//TODO: add music | sound effects
+//TODO: add images | video on bg ?
+//TODO: сверять хэш файла crackme.com
+
+//------------------------------------------------------------------//
+
 int main()
 {
-    Patcher_t patcher = {};
+    AppCtx_t        app = {};
+    GraphicsCtx_t   gfx = {};
 
-    if (PatcherCtor(&patcher) != PATCH_SUCCESS)
+    do
     {
-        return EXIT_FAILURE;
-    }
+        if (AppInit(&app, &gfx) != APP_SUCCESS)
+            break;
 
-    while (patcher.window_is_active)
-    {
-        SDL_GetMouseState(&patcher.mouse_x, &patcher.mouse_y);
+        if (AppLoadMedia(&app, &gfx) != APP_SUCCESS)
+            break;
 
-        while (SDL_PollEvent(&patcher.event))
+        while (app.is_running)
         {
-            PatcherUpdate(&patcher);
+            while (SDL_PollEvent(&app.event) != 0)
+            {
+                if (app.event.type == SDL_QUIT)
+                {
+                    app.is_running = false;
+                }
+            }
+
+            if (AppDraw(&app, &gfx) != APP_SUCCESS)
+                break;
         }
-
-        PatcherWaitTime(&patcher);
-        RenderScreen   (&patcher);
     }
+    while (0);
 
-    PatcherDtor(&patcher);
+    AppClose(&app, &gfx);
+
+    return EXIT_SUCCESS;
 }
 
 //----------------------------------------------------------------------

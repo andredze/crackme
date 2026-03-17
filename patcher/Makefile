@@ -1,23 +1,9 @@
 CXX = g++
 
-CXXFLAGS = \
-	-D _DEBUG \
-	-ggdb3		\
-	-std=c++17 \
-	-O0 \
-	-Wall \
-	-Wextra \
-	-Wsign-conversion \
-	-Waggressive-loop-optimizations \
-	-Wc++14-compat \
-	-Wmissing-declarations \
-	-Wcast-align \
-	-Wcast-qual \
-	-Wchar-subscripts \
-	-Wconditionally-supported \
-	-Wctor-dtor-privacy \
-	-Wempty-body \
-	-Wformat-nonliteral 		 			 \
+CXXFLAGS = -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Wsign-conversion 			 \
+		   -Waggressive-loop-optimizations -Wc++14-compat -Wmissing-declarations 		   		 \
+		   -Wcast-align -Wcast-qual -Wchar-subscripts -Wconditionally-supported  		   		 \
+		    -Wctor-dtor-privacy -Wempty-body -Wfloat-equal -Wformat-nonliteral 		 			 \
 		   -Wformat-security -Wformat-signedness -Wformat=2 -Winline -Wlogical-op 		   		 \
 		   -Wnon-virtual-dtor -Wopenmp-simd -Woverloaded-virtual -Wpacked -Wpointer-arith  		 \
 		   -Winit-self -Wredundant-decls -Wshadow -Wsign-promo		   		 					 \
@@ -31,35 +17,36 @@ CXXFLAGS = \
 
 CXXFLAGS += -fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr
 
-CXXFLAGS += -I include
+INCLUDES += -I include
 
 SOURCES = src/main.cpp	 		\
 		  src/graphics.cpp 		\
 		  src/crack.cpp 		\
+		  src/input.cpp 		\
 
+CXXFLAGS += -D PATCHER_DEBUG -D DEBUG
 ifdef DEBUG
-CXXFLAGS += -D PATCHER_DEBUG
 endif
 
 OBJS = $(SOURCES:src/%.cpp=obj/%.o)
 
 TARGET = patcher
 
-LDFLAGS = -lSDL2 -lSDL2_ttf
+LDFLAGS = -lSDL2 -lSDL2_ttf -lSDL2_image -lSDL2_mixer
 
 $(shell mkdir -p obj)
 
-rebuild: clean all
+all: clean build
 
-all: $(TARGET)
+build: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CXX) $(OBJS) -o $@ $(CXXFLAGS) $(LDFLAGS)
 
 obj/%.o: src/%.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
 
 clean:
 	rm -rf $(OBJS) $(TARGET)
 
-.PHONY: all clean
+.PHONY: all clean build
