@@ -9,7 +9,7 @@
 
 const Uint32 THEME_CHANGE_DELAY        = 500;
 const Uint32 PRESS_BUTTON_TIME_DELAY   = 100;
-const Uint32 LOADING_SCREEN_FRAME_TIME = 750;
+const Uint32 LOADING_SCREEN_FRAME_TIME = 400;
 
 //------------------------------------------------------------------//
 
