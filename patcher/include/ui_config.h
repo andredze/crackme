@@ -9,7 +9,7 @@
 
 const Uint32 THEME_CHANGE_DELAY        = 500;
 const Uint32 PRESS_BUTTON_TIME_DELAY   = 100;
-const Uint32 LOADING_SCREEN_FRAME_TIME = 1000;
+const Uint32 LOADING_SCREEN_FRAME_TIME = 750;
 
 //------------------------------------------------------------------//
 
@@ -28,6 +28,23 @@ const int PANORAMA_HEIGHT = (int) (PANORAMA_WIDTH / SCREEN_RATIO);
 
 const SDL_Rect FULL_SCREEN_RECT  = {.x = 0, .y = 0,   .w = SCREEN_WIDTH,   .h = SCREEN_HEIGHT};
 const SDL_Rect PANORAMA_RECT     = {.x = 0, .y = 600, .w = PANORAMA_WIDTH, .h = PANORAMA_HEIGHT};
+
+//------------------------------------------------------------------//
+
+const int PROGRESS_BARS_COUNT = 10;
+
+const int PROGRESS_BAR_WIDTH  = (int) (SCREEN_WIDTH / 2.5);
+const int PROGRESS_BAR_HEIGHT = 15;
+const int PROGRESS_BAR_POS_X  = (SCREEN_WIDTH  - PROGRESS_BAR_WIDTH) / 2;
+const int PROGRESS_BAR_POS_Y  = (SCREEN_HEIGHT + 50) / 2;
+
+const SDL_Rect PROGRESS_BAR_SCREEN_RECT = {.x = PROGRESS_BAR_POS_X,
+                                           .y = PROGRESS_BAR_POS_Y,
+                                           .w = PROGRESS_BAR_WIDTH,
+                                           .h = PROGRESS_BAR_HEIGHT};
+
+const SDL_Color PROGRESS_BAR_COLOR     = {0x80, 0x80, 0x80, 0xFF};
+const SDL_Color PROGRESS_BAR_FILLCOLOR = {0x80, 0xFF, 0x80, 0xFF};
 
 //------------------------------------------------------------------//
 
@@ -87,9 +104,9 @@ const SDL_Color LOAD_MESSAGE_COLOR  = SDL_COLOR_WHITE;
 const int LOAD_MESSAGE_CENTER_POS_Y = SCREEN_HEIGHT * 5 / 10;
 const int LOAD_MESSAGE_CENTER_POS_X = SCREEN_WIDTH / 2;
 
-const char * const LOAD_TITLE_TEXT = "PATCHING...";
+const char * const LOAD_TITLE_TEXT = "Patching CRACKME.COM level";
 const SDL_Color LOAD_TITLE_COLOR   = SDL_COLOR_WHITE;
-const int LOAD_TITLE_CENTER_POS_Y  = SCREEN_HEIGHT * 3 / 10;
+const int LOAD_TITLE_CENTER_POS_Y  = SCREEN_HEIGHT * 4 / 10;
 const int LOAD_TITLE_CENTER_POS_X  = SCREEN_WIDTH / 2;
 
 //------------------------------------------------------------------//

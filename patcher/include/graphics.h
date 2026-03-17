@@ -91,6 +91,12 @@ ButtonCtx_t;
 typedef struct ProgressBar
 {
     int progress;
+
+    SDL_Rect     bar;
+    SDL_Color    bar_color;
+
+    SDL_Rect     fill;
+    SDL_Color    fill_color;
 }
 ProgressBar_t;
 

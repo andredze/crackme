@@ -335,6 +335,22 @@ static AppErr_t AppLoadMessage(GraphicsCtx_t* gfx, Text_t* message)
 
 //------------------------------------------------------------------//
 
+static AppErr_t AppLoadProgressBar(GraphicsCtx_t* gfx)
+{
+    assert(gfx);
+
+    gfx->load_screen.progress_bar.bar    = PROGRESS_BAR_SCREEN_RECT;
+    gfx->load_screen.progress_bar.fill   = PROGRESS_BAR_SCREEN_RECT;
+    gfx->load_screen.progress_bar.fill.w = 0;
+
+    gfx->load_screen.progress_bar.bar_color  = PROGRESS_BAR_COLOR;
+    gfx->load_screen.progress_bar.fill_color = PROGRESS_BAR_FILLCOLOR;
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
 static AppErr_t AppLoadLoadingScreen(GraphicsCtx_t* gfx)
 {
     assert(gfx);
@@ -367,12 +383,10 @@ static AppErr_t AppLoadLoadingScreen(GraphicsCtx_t* gfx)
     {
         return error;
     }
-
-    gfx->load_screen.title.text_rect.h = gfx->load_screen.title.text_rect.h * 3 / 2;
-    gfx->load_screen.title.text_rect.w = gfx->load_screen.title.text_rect.w * 3 / 2;
-
-    gfx->load_screen.title.text_rect.y -= gfx->load_screen.title.text_rect.h / 4;
-    gfx->load_screen.title.text_rect.x -= gfx->load_screen.title.text_rect.w / 4;
+    if ((error = AppLoadProgressBar(gfx)))
+    {
+        return error;
+    }
 
     return APP_SUCCESS;
 }
@@ -450,10 +464,9 @@ static bool AppIsOnCooldown(Uint32* last_activation_ms, Uint32 cooldown_ms)
 
     if (current_ms - *last_activation_ms >= cooldown_ms)
     {
+        *last_activation_ms = current_ms;
         return false;
     }
-
-    *last_activation_ms = current_ms;
 
     return true;
 }
@@ -682,6 +695,24 @@ static void RenderMain(AppCtx_t* app, GraphicsCtx_t* gfx)
 
 //------------------------------------------------------------------//
 
+static void RenderProgressBar(AppCtx_t* app, GraphicsCtx_t* gfx)
+{
+    SDL_Color bar_color = gfx->load_screen.progress_bar.bar_color;
+
+    SDL_SetRenderDrawColor(gfx->rend, bar_color.r, bar_color.g, bar_color.b, bar_color.a);
+    SDL_RenderFillRect(gfx->rend, &gfx->load_screen.progress_bar.bar);
+
+    gfx->load_screen.progress_bar.fill.w = gfx->load_screen.progress_bar.bar.w *
+                                           gfx->load_screen.progress_bar.progress / 100;
+
+    SDL_Color fill_color = gfx->load_screen.progress_bar.fill_color;
+
+    SDL_SetRenderDrawColor(gfx->rend, fill_color.r, fill_color.g, fill_color.b, fill_color.a);
+    SDL_RenderFillRect(gfx->rend, &gfx->load_screen.progress_bar.fill);
+}
+
+//------------------------------------------------------------------//
+
 static void RenderLoadingScreen(AppCtx_t* app, GraphicsCtx_t* gfx)
 {
     assert(app);
@@ -702,7 +733,7 @@ static void RenderLoadingScreen(AppCtx_t* app, GraphicsCtx_t* gfx)
                    NULL,
                    &gfx->load_screen.messages[gfx->load_screen.cur_message_number].text_rect);
 
-    // RenderProgressBar(app, gfx);
+    RenderProgressBar(app, gfx);
 }
 
 //------------------------------------------------------------------//
@@ -739,6 +770,8 @@ void AppClose(AppCtx_t* app, GraphicsCtx_t* gfx)
 {
     assert(app);
     assert(gfx);
+
+    Mix_HaltMusic();
 
     TTF_CloseFont(gfx->font);
     gfx->font = NULL;
