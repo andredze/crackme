@@ -35,6 +35,7 @@ AppErr_t MakePatch(AppCtx_t* app, GraphicsCtx_t* gfx)
     }
     if (OpenFile(&app->crack_input.output_file_info, "wb"))
     {
+        fclose(app->crack_input.input_file_info.stream);
         return APP_FILE_ERROR;
     }
 
@@ -42,6 +43,8 @@ AppErr_t MakePatch(AppCtx_t* app, GraphicsCtx_t* gfx)
 
     if (ReadText(&app->crack_input))
     {
+        fclose(app->crack_input.input_file_info.stream);
+        fclose(app->crack_input.output_file_info.stream);
         return APP_FILE_ERROR;
     }
 
@@ -49,6 +52,10 @@ AppErr_t MakePatch(AppCtx_t* app, GraphicsCtx_t* gfx)
                                      app->crack_input.input_file_info.size))
     {
         PRINTERR("This file is not crackme.com that I'm hacking");
+
+        free(app->crack_input.buffer_data.buffer);
+        fclose(app->crack_input.input_file_info.stream);
+        fclose(app->crack_input.output_file_info.stream);
 
         return APP_WRONG_FILE;
     }
@@ -69,6 +76,9 @@ AppErr_t MakePatch(AppCtx_t* app, GraphicsCtx_t* gfx)
                app->crack_input.output_file_info.stream) != 1)
     {
         PRINTERR("fwrite to %s failed", app->crack_input.output_file_info.filepath);
+        free(app->crack_input.buffer_data.buffer);
+        fclose(app->crack_input.input_file_info.stream);
+        fclose(app->crack_input.output_file_info.stream);
         return APP_FILE_ERROR;
     }
 
