@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include "input.h"
 #include "my_printfs.h"
 #include "ui_config.h"
 #include <SDL2/SDL.h>
@@ -38,6 +39,7 @@ typedef enum AppErr
     APP_SDL_SURFACE_ERROR,
     APP_SDL_TEXTURE_ERROR,
     APP_FILE_ERROR,
+    APP_WRONG_FILE,
     APP_FONT_ERROR
 }
 AppErr_t;
@@ -166,7 +168,7 @@ typedef struct AppCtx
 {
     bool        is_running;
     SDL_Event   event;
-    FILE*       target_file;
+    InputCtx    crack_input;
     AppState_t  state;
 }
 AppCtx_t;

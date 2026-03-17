@@ -3,6 +3,22 @@
 
 //------------------------------------------------------------------//
 
+size_t CountHash(char* data, size_t size)
+{
+    assert(data);
+
+    size_t hash = 5381;
+
+    for (size_t i = 0; i < size; i++)
+    {
+        hash = ((hash << 5) + hash) + data[i];
+    }
+
+    return hash;
+}
+
+//------------------------------------------------------------------//
+
 AppErr_t MakePatch(AppCtx_t* app, GraphicsCtx_t* gfx)
 {
     assert(app);
@@ -10,35 +26,57 @@ AppErr_t MakePatch(AppCtx_t* app, GraphicsCtx_t* gfx)
 
     DPRINTF("Making patch\n");
 
-    app->target_file = fopen(TARGET_FILE_NAME, "r+");
+    app->crack_input = {.input_file_info  = {.filepath = TARGET_FILE_NAME},
+                        .output_file_info = {.filepath = CRACKED_FILE_NAME}};
 
-    if (app->target_file == NULL)
+    if (OpenFile(&app->crack_input.input_file_info, "rb"))
     {
-        PRINTERR("Failed to open file %s", TARGET_FILE_NAME);
+        return APP_FILE_ERROR;
+    }
+    if (OpenFile(&app->crack_input.output_file_info, "wb"))
+    {
         return APP_FILE_ERROR;
     }
 
     DPRINTF("Opened file\n");
 
-    if (fseek(app->target_file, PATCH_ADDRESS, SEEK_SET) != 0)
+    if (ReadText(&app->crack_input))
     {
-        PRINTERR("fseek for PATCH_ADDRESS failed");
         return APP_FILE_ERROR;
     }
 
-    DPRINTF("Found byte\n");
-
-    if (fwrite(&TWO_NOPS_BYTECODE, 1, 2, app->target_file) != 2)
+    if (CRACKME_HASH != CountHash(app->crack_input.buffer_data.buffer,
+                                     app->crack_input.input_file_info.size))
     {
-        PRINTERR("fwrite NOPs failed");
-        return APP_FILE_ERROR;
+        PRINTERR("This file is not crackme.com that I'm hacking");
+
+        return APP_WRONG_FILE;
     }
+
+    printf("hash = %zu\n", CountHash(app->crack_input.buffer_data.buffer,
+                                     app->crack_input.input_file_info.size));
+
+    app->crack_input.buffer_data.buffer[PATCH_ADDRESS]     = NOP_BYTECODE;
+    app->crack_input.buffer_data.buffer[PATCH_ADDRESS + 1] = NOP_BYTECODE;
 
     DPRINTF("Wrote nops\n");
+    printf("cracked hash = %zu\n", CountHash(app->crack_input.buffer_data.buffer,
+                                             app->crack_input.input_file_info.size));
 
-    fclose(app->target_file);
+    if (fwrite(app->crack_input.buffer_data.buffer,
+               app->crack_input.input_file_info.size,
+               1,
+               app->crack_input.output_file_info.stream) != 1)
+    {
+        PRINTERR("fwrite to %s failed", app->crack_input.output_file_info.filepath);
+        return APP_FILE_ERROR;
+    }
 
-    DPRINTF("Closed file\n");
+    free(app->crack_input.buffer_data.buffer);
+    fclose(app->crack_input.input_file_info.stream);
+    fclose(app->crack_input.output_file_info.stream);
+
+    DPRINTF("Closed files\n");
 
     return APP_SUCCESS;
 }

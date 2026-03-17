@@ -1,7 +1,6 @@
 #include "crack.h"
 #include "graphics.h"
 
-//TODO: сверять хэш файла crackme.com
 //------------------------------------------------------------------//
 
 int main()

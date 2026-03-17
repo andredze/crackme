@@ -8,8 +8,16 @@
 
 //------------------------------------------------------------------//
 
-const int PATCH_ADDRESS     = 0x001A;
-const int TWO_NOPS_BYTECODE = 0x9090;
+const int  PATCH_ADDRESS = 0x001A;
+const char NOP_BYTECODE  = 0x90;
+
+const size_t CRACKME_HASH = 14160779300616998209;
+const size_t CRACKED_HASH = 12508325699750982611;
+
+//------------------------------------------------------------------//
+
+const char * const TARGET_FILE_NAME  = "crackme.com";
+const char * const CRACKED_FILE_NAME = "cracked.com";
 
 //------------------------------------------------------------------//
 
