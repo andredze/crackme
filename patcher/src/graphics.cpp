@@ -20,6 +20,7 @@ AppErr_t AppInit(AppCtx_t* app, GraphicsCtx_t* gfx)
 
     DPRINTF("AppInit start\n");
 
+    app->state = APP_STATE_MAIN_MENU;
     app->is_running = true;
 
     //------------------------------------------------------------------//
@@ -82,6 +83,16 @@ AppErr_t AppInit(AppCtx_t* app, GraphicsCtx_t* gfx)
         PRINTERR("Failed Mixer init. MIX_Error: %s", Mix_GetError());
         return APP_AUDIO_INIT_ERROR;
     }
+
+    //------------------------------------------------------------------//
+
+    if (TTF_Init() == -1)
+    {
+        PRINTERR("Failed to init fonts. TTF_Error: %s", TTF_GetError());
+        return APP_FONT_INIT_ERROR;
+    }
+
+    //------------------------------------------------------------------//
 
     return APP_SUCCESS;
 }
@@ -181,26 +192,227 @@ static AppErr_t AppLoadTexture(GraphicsCtx_t*       gfx,
 
 //------------------------------------------------------------------//
 
+static AppErr_t AppLoadText(GraphicsCtx_t* gfx, Text_t* text_ctx)
+{
+    assert(gfx);
+    assert(text_ctx);
+
+    SDL_Surface* text_surface = TTF_RenderText_Solid(gfx->font, text_ctx->text,
+                                                     text_ctx->color);
+
+    if (text_surface == NULL)
+    {
+        PRINTERR("Failed to make surface from text %s. TTF_Error: %s", text_ctx->text, TTF_GetError());
+        return APP_SDL_SURFACE_ERROR;
+    }
+
+    text_ctx->texture = SDL_CreateTextureFromSurface(gfx->rend, text_surface);
+
+    if (text_ctx->texture == NULL)
+    {
+        PRINTERR("Failed to make texture for text %s. SDL_Error: %s", text_ctx->text, SDL_GetError());
+        return APP_SDL_TEXTURE_ERROR;
+    }
+
+    text_ctx->text_rect.w = LETTER_SIZE * (int) strlen(text_ctx->text);
+    text_ctx->text_rect.h = (int) (((double) text_ctx->text_rect.w / text_surface->w) * text_surface->h);
+
+    text_ctx->text_rect.x = text_ctx->center_x - text_ctx->text_rect.w / 2;
+    text_ctx->text_rect.y = text_ctx->center_y - text_ctx->text_rect.h / 2;
+
+    DPRINTF("text: %s, w = %d, h = %d, x = %d, y = %d\n",
+            text_ctx->text,
+            text_ctx->text_rect.w,
+            text_ctx->text_rect.h,
+            text_ctx->text_rect.x,
+            text_ctx->text_rect.y);
+
+    SDL_FreeSurface(text_surface);
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
+static AppErr_t AppLoadButton(GraphicsCtx_t* gfx, ButtonCtx_t* button, int button_number)
+{
+    assert(gfx);
+    assert(button);
+
+    if (AppLoadTexture(gfx, &button->texture_ctx,
+                       IMAGE_FILE_PATH_BUTTON,
+                       &BUTTON_IMAGE_RECT_INACTIVE,
+                       &BUTTON_CASES_TABLE[button_number].screen_rect))
+    {
+        return APP_SDL_TEXTURE_ERROR;
+    }
+
+    button->text_ctx.center_x = button->texture_ctx.screen_rect.x + button->texture_ctx.screen_rect.w / 2;
+    button->text_ctx.center_y = button->texture_ctx.screen_rect.y + button->texture_ctx.screen_rect.h / 2;
+    button->text_ctx.text     = BUTTON_CASES_TABLE[button_number].text;
+    button->text_ctx.color    = BUTTON_CASES_TABLE[button_number].text_color;
+
+    AppErr_t error = APP_SUCCESS;
+
+    if ((error = AppLoadText(gfx, &button->text_ctx)))
+    {
+        return error;
+    }
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
+static AppErr_t AppLoadMenu(GraphicsCtx_t* gfx)
+{
+    assert(gfx);
+
+    AppErr_t error = APP_SUCCESS;
+
+    for (int i = 0; i < BUTTONS_COUNT; i++)
+    {
+        if ((error = AppLoadButton(gfx, &gfx->buttons[i], i)))
+        {
+            return error;
+        }
+    }
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
+static AppErr_t AppLoadMain(GraphicsCtx_t* gfx)
+{
+    assert(gfx);
+
+    for (size_t i = 0; i < THEMES_COUNT; i++)
+    {
+        if (AppLoadTexture(gfx, &gfx->themes[i].bg, THEMES_TABLE[i].bg_file_path,
+                           &PANORAMA_RECT, &FULL_SCREEN_RECT))
+        {
+            return APP_SDL_TEXTURE_ERROR;
+        }
+    }
+
+    if (AppLoadTexture(gfx, &gfx->title, IMAGE_FILE_PATH_TITLE,
+                       NULL, &TITLE_SCREEN_RECT))
+    {
+        return APP_SDL_TEXTURE_ERROR;
+    }
+
+    AppErr_t error = APP_SUCCESS;
+
+    if ((error = AppLoadMenu(gfx)))
+    {
+        return error;
+    }
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
+static AppErr_t AppLoadMessage(GraphicsCtx_t* gfx, Text_t* message)
+{
+    assert(gfx);
+    assert(message);
+
+    AppErr_t error = APP_SUCCESS;
+
+    message->center_x = LOAD_MESSAGE_CENTER_POS_X;
+    message->center_y = LOAD_MESSAGE_CENTER_POS_Y;
+    message->color    = LOAD_MESSAGE_COLOR;
+
+    if ((error = AppLoadText(gfx, message)))
+    {
+        return error;
+    }
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
+static AppErr_t AppLoadLoadingScreen(GraphicsCtx_t* gfx)
+{
+    assert(gfx);
+
+    AppErr_t error = APP_SUCCESS;
+
+    if (AppLoadTexture(gfx, &gfx->load_screen.loading_bg,
+                       IMAGE_FILE_PATH_LOADING_BACKGROUND,
+                       &LOADING_BG_RECT, &FULL_SCREEN_RECT))
+    {
+        return APP_SDL_TEXTURE_ERROR;
+    }
+
+    for (size_t i = 0; i < LOAD_MESSAGES_COUNT; i++)
+    {
+        gfx->load_screen.messages[i].text = LOAD_MESSAGE_TEXT_TABLE[i];
+
+        if ((error = AppLoadMessage(gfx, &gfx->load_screen.messages[i])))
+        {
+            return error;
+        }
+    }
+
+    gfx->load_screen.title.text     = LOAD_TITLE_TEXT;
+    gfx->load_screen.title.center_x = LOAD_TITLE_CENTER_POS_X;
+    gfx->load_screen.title.center_y = LOAD_TITLE_CENTER_POS_Y;
+    gfx->load_screen.title.color    = LOAD_TITLE_COLOR;
+
+    if ((error = AppLoadText(gfx, &gfx->load_screen.title)))
+    {
+        return error;
+    }
+
+    gfx->load_screen.title.text_rect.h = gfx->load_screen.title.text_rect.h * 3 / 2;
+    gfx->load_screen.title.text_rect.w = gfx->load_screen.title.text_rect.w * 3 / 2;
+
+    gfx->load_screen.title.text_rect.y -= gfx->load_screen.title.text_rect.h / 4;
+    gfx->load_screen.title.text_rect.x -= gfx->load_screen.title.text_rect.w / 4;
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
 AppErr_t AppLoadMedia(AppCtx_t* app, GraphicsCtx_t* gfx)
 {
     assert(app);
     assert(gfx);
 
-    gfx->music = Mix_LoadMUS(MUSIC_FILE_PATH_CLASSIC);
-
-    if (gfx->music == NULL)
+    for (size_t i = 0; i < THEMES_COUNT; i++)
     {
-        PRINTERR("Failed to load music %s. Mix_Error: %s", MUSIC_FILE_PATH_CLASSIC, Mix_GetError());
-        return APP_AUDIO_LOAD_ERROR;
+        gfx->themes[i].music = Mix_LoadMUS(THEMES_TABLE[i].music_file_path);
+
+        if (gfx->themes[i].music == NULL)
+        {
+            PRINTERR("Failed to load music %s. Mix_Error: %s",
+                     THEMES_TABLE[i].music_file_path, Mix_GetError());
+            return APP_AUDIO_LOAD_ERROR;
+        }
     }
 
-    if (AppLoadTexture(gfx, &gfx->bg, IMAGE_FILE_PATH_BACKGROUND, &PANORAMA_RECT, &FULL_SCREEN_RECT))
+    gfx->font = TTF_OpenFont(FONT_FILE_PATH, FONT_SIZE);
+
+    if (gfx->font == NULL)
     {
-        return APP_SDL_TEXTURE_ERROR;
+        PRINTERR("Failed to open font %s. Error: %s", FONT_FILE_PATH, TTF_GetError());
+        return APP_LOAD_FONT_ERROR;
     }
-    if (AppLoadTexture(gfx, &gfx->title, IMAGE_FILE_PATH_TITLE, NULL, &TITLE_SCREEN_RECT))
+
+    AppErr_t error = APP_SUCCESS;
+
+    if ((error = AppLoadMain(gfx)))
     {
-        return APP_SDL_TEXTURE_ERROR;
+        return error;
+    }
+    if ((error = AppLoadLoadingScreen(gfx)))
+    {
+        return error;
     }
 
     return APP_SUCCESS;
@@ -208,24 +420,313 @@ AppErr_t AppLoadMedia(AppCtx_t* app, GraphicsCtx_t* gfx)
 
 //——————————————————————————————————————————————————————————————————————————————————————————
 
-AppErr_t AppDraw(AppCtx_t* app, GraphicsCtx_t* gfx)
+static inline bool AppMouseIsInsideButton(GraphicsCtx_t* gfx, ButtonCtx_t* button)
 {
-    if (Mix_PlayingMusic() == 0)
+    assert(gfx);
+    assert(button);
+
+    if (!(gfx->mouse_x >= button->texture_ctx.screen_rect.x))
+        return false;
+
+    if (!(gfx->mouse_x <= button->texture_ctx.screen_rect.x +
+                          button->texture_ctx.screen_rect.w))
+        return false;
+
+    if (!(gfx->mouse_y >= button->texture_ctx.screen_rect.y))
+        return false;
+
+    if (!(gfx->mouse_y <= button->texture_ctx.screen_rect.y +
+                          button->texture_ctx.screen_rect.h))
+        return false;
+
+    return true;
+}
+
+//------------------------------------------------------------------//
+
+static bool AppIsOnCooldown(Uint32* last_activation_ms, Uint32 cooldown_ms)
+{
+    Uint32 current_ms = SDL_GetTicks();
+
+    if (current_ms - *last_activation_ms >= cooldown_ms)
     {
-        Mix_PlayMusic(gfx->music, -1); // -1 == loop music
+        return false;
     }
 
-    SDL_RenderClear(gfx->rend);
+    *last_activation_ms = current_ms;
+
+    return true;
+}
+
+//------------------------------------------------------------------//
+
+static AppErr_t AppUpdateButtonState(AppCtx_t* app, GraphicsCtx_t* gfx, ButtonCtx_t* button)
+{
+    assert(app);
+    assert(gfx);
+
+    bool inside = AppMouseIsInsideButton(gfx, button);
+
+    if (button->state == BUTTON_PRESSED)
+    {
+        bool is_on_cooldown = AppIsOnCooldown(&button->last_ticks, PRESS_BUTTON_TIME_DELAY);
+
+        if (is_on_cooldown)
+            return APP_SUCCESS;
+    }
+
+    if (!inside)
+    {
+        button->state = BUTTON_INACTIVE;
+
+        return APP_SUCCESS;
+    }
+
+    if (app->event.type == SDL_MOUSEBUTTONDOWN)
+    {
+        button->state      = BUTTON_PRESSED;
+        button->last_ticks = SDL_GetTicks();
+
+        return APP_SUCCESS;
+    }
+
+    button->state = BUTTON_HOVERED;
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
+static AppErr_t AppUpdateLoadingScreen(AppCtx_t* app, GraphicsCtx_t* gfx)
+{
+    assert(app);
+    assert(gfx);
+
+    if (gfx->load_screen.progress_bar.progress >= 100)
+    {
+        app->state = APP_STATE_MAIN_MENU;
+
+        gfx->load_screen.progress_bar.progress = 0;
+        gfx->load_screen.cur_message_number    = 0;
+
+        return APP_SUCCESS;
+    }
+
+    bool is_on_cooldown = AppIsOnCooldown(&gfx->load_screen.last_ticks, LOADING_SCREEN_FRAME_TIME);
+
+    if (!is_on_cooldown)
+    {
+        gfx->load_screen.progress_bar.progress += 10;
+        gfx->load_screen.cur_message_number    += 1;
+    }
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
+static AppErr_t AppUpdateMainMenu(AppCtx_t* app, GraphicsCtx_t* gfx)
+{
+    assert(app);
+    assert(gfx);
+
+    AppErr_t error = APP_SUCCESS;
+
+    if (!(app->event.type == SDL_MOUSEMOTION     ||
+          app->event.type == SDL_MOUSEBUTTONDOWN ||
+          app->event.type == SDL_MOUSEBUTTONUP))
+    {
+        return APP_SUCCESS;
+    }
+
+    SDL_GetMouseState(&gfx->mouse_x, &gfx->mouse_y);
+
+    for (int i = 0; i < BUTTONS_COUNT; i++)
+    {
+        if ((error = AppUpdateButtonState(app, gfx, &gfx->buttons[i])))
+                return error;
+    }
+
+    if (gfx->buttons[0].state == BUTTON_PRESSED)
+    {
+        app->state = APP_STATE_LOADING_SCREEN;
+
+        if ((error = MakePatch(app, gfx)))
+        {
+            return error;
+        }
+    }
+    if (gfx->buttons[1].state == BUTTON_PRESSED)
+    {
+        bool make_delay = AppIsOnCooldown(&gfx->theme_last_ticks, THEME_CHANGE_DELAY);
+
+        if (make_delay)
+            return APP_SUCCESS;
+
+        Mix_HaltMusic();
+
+        gfx->curr_theme += 1;
+        gfx->curr_theme %= (int) THEMES_COUNT;
+
+        Mix_PlayMusic(gfx->themes[gfx->curr_theme].music, -1); // -1 == loop music
+    }
+    if (gfx->buttons[2].state == BUTTON_PRESSED)
+    {
+        app->is_running = false;
+    }
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
+AppErr_t AppUpdateState(AppCtx_t* app, GraphicsCtx_t* gfx)
+{
+    assert(app);
+    assert(gfx);
+
+    AppErr_t error = APP_SUCCESS;
+
+    while (SDL_PollEvent(&app->event) != 0)
+    {
+        if (app->event.type == SDL_QUIT)
+        {
+            app->is_running = false;
+        }
+        if (app->state == APP_STATE_LOADING_SCREEN)
+        {
+            if ((error = AppUpdateLoadingScreen(app, gfx)))
+                return error;
+        }
+        else
+        {
+            if ((error = AppUpdateMainMenu(app, gfx)))
+                return error;
+        }
+    }
+
+    return APP_SUCCESS;
+}
+
+//——————————————————————————————————————————————————————————————————————————————————————————
+
+static void RenderButton(AppCtx_t* app, SDL_Renderer* rend, ButtonCtx_t* button)
+{
+    assert(app);
+    assert(button);
+
+    switch (button->state)
+    {
+        case BUTTON_INACTIVE:
+            button->texture_ctx.image_rect.y = BUTTON_IMAGE_POS_Y_INACTIVE;
+            break;
+
+        case BUTTON_HOVERED:
+            button->texture_ctx.image_rect.y = BUTTON_IMAGE_POS_Y_HOVERED;
+            break;
+
+        case BUTTON_PRESSED:
+            button->texture_ctx.image_rect.y = BUTTON_IMAGE_POS_Y_PRESSED;
+            break;
+
+        default:
+            PRINTERR("Unknown button state!");
+            return;
+    }
+
+    SDL_RenderCopy(rend,
+                   button->texture_ctx.image_texture,
+                   &button->texture_ctx.image_rect,
+                   &button->texture_ctx.screen_rect);
+
+    SDL_RenderCopy(rend,
+                   button->text_ctx.texture,
+                   NULL,
+                   &button->text_ctx.text_rect);
+
+    return;
+}
+
+//------------------------------------------------------------------//
+
+static void RenderMenu(AppCtx_t* app, GraphicsCtx_t* gfx)
+{
+    assert(app);
+    assert(gfx);
+
+    for (int i = 0; i < BUTTONS_COUNT; i++)
+    {
+        RenderButton(app, gfx->rend, &gfx->buttons[i]);
+    }
+}
+
+//------------------------------------------------------------------//
+
+static void RenderMain(AppCtx_t* app, GraphicsCtx_t* gfx)
+{
+    assert(app);
+    assert(gfx);
 
     SDL_RenderCopy(gfx->rend,
-                   gfx->bg.image_texture,
-                   &gfx->bg.image_rect,
-                   &gfx->bg.screen_rect);
+                   gfx->themes[gfx->curr_theme].bg.image_texture,
+                   &gfx->themes[gfx->curr_theme].bg.image_rect,
+                   &gfx->themes[gfx->curr_theme].bg.screen_rect);
 
     SDL_RenderCopy(gfx->rend,
                    gfx->title.image_texture,
                    NULL,
                    &gfx->title.screen_rect);
+
+    RenderMenu(app, gfx);
+}
+
+//------------------------------------------------------------------//
+
+static void RenderLoadingScreen(AppCtx_t* app, GraphicsCtx_t* gfx)
+{
+    assert(app);
+    assert(gfx);
+
+    SDL_RenderCopy(gfx->rend,
+                   gfx->load_screen.loading_bg.image_texture,
+                   &gfx->load_screen.loading_bg.image_rect,
+                   &gfx->load_screen.loading_bg.screen_rect);
+
+    SDL_RenderCopy(gfx->rend,
+                   gfx->load_screen.title.texture,
+                   NULL,
+                   &gfx->load_screen.title.text_rect);
+
+    SDL_RenderCopy(gfx->rend,
+                   gfx->load_screen.messages[gfx->load_screen.cur_message_number].texture,
+                   NULL,
+                   &gfx->load_screen.messages[gfx->load_screen.cur_message_number].text_rect);
+
+    // RenderProgressBar(app, gfx);
+}
+
+//------------------------------------------------------------------//
+
+AppErr_t AppDraw(AppCtx_t* app, GraphicsCtx_t* gfx)
+{
+    assert(app);
+    assert(gfx);
+
+    if (Mix_PlayingMusic() == 0)
+    {
+        Mix_PlayMusic(gfx->themes[gfx->curr_theme].music, -1); // -1 == loop music
+    }
+
+    SDL_RenderClear(gfx->rend);
+
+    if (app->state == APP_STATE_MAIN_MENU)
+    {
+        RenderMain(app, gfx);
+    }
+    else
+    {
+        RenderLoadingScreen(app, gfx);
+    }
 
     SDL_RenderPresent(gfx->rend);
 
@@ -239,11 +740,38 @@ void AppClose(AppCtx_t* app, GraphicsCtx_t* gfx)
     assert(app);
     assert(gfx);
 
-    Mix_FreeMusic(gfx->music);
-    gfx->music = NULL;
+    TTF_CloseFont(gfx->font);
+    gfx->font = NULL;
 
-    SDL_DestroyTexture(gfx->bg.image_texture);
-    gfx->bg.image_texture = NULL;
+    for (int i = 0; i < BUTTONS_COUNT; i++)
+    {
+        SDL_DestroyTexture(gfx->buttons[i].text_ctx.texture);
+        gfx->buttons[i].text_ctx.texture = NULL;
+
+        SDL_DestroyTexture(gfx->buttons[i].texture_ctx.image_texture);
+        gfx->buttons[i].texture_ctx.image_texture = NULL;
+    }
+
+    for (size_t i = 0; i < THEMES_COUNT; i++)
+    {
+        Mix_FreeMusic(gfx->themes[i].music);
+        gfx->themes[i].music = NULL;
+
+        SDL_DestroyTexture(gfx->themes[i].bg.image_texture);
+        gfx->themes[i].bg.image_texture = NULL;
+    }
+
+    SDL_DestroyTexture(gfx->load_screen.loading_bg.image_texture);
+    gfx->load_screen.loading_bg.image_texture = NULL;
+
+    for (size_t i = 0; i < LOAD_MESSAGES_COUNT; i++)
+    {
+        SDL_DestroyTexture(gfx->load_screen.messages[i].texture);
+        gfx->load_screen.messages[i].texture = NULL;
+    }
+
+    SDL_DestroyTexture(gfx->load_screen.title.texture);
+    gfx->load_screen.title.texture = NULL;
 
     SDL_FreeSurface(gfx->screen_surface);
     gfx->screen_surface = NULL;
@@ -254,6 +782,7 @@ void AppClose(AppCtx_t* app, GraphicsCtx_t* gfx)
     SDL_DestroyWindow(gfx->window);
     gfx->window = NULL;
 
+    TTF_Quit();
     Mix_Quit();
     IMG_Quit();
     SDL_Quit();

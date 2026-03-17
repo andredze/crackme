@@ -1,12 +1,7 @@
 #include "crack.h"
 #include "graphics.h"
 
-//----------------------------------------------------------------------
-
-//TODO: add music | sound effects
-//TODO: add images | video on bg ?
 //TODO: сверять хэш файла crackme.com
-
 //------------------------------------------------------------------//
 
 int main()
@@ -24,13 +19,8 @@ int main()
 
         while (app.is_running)
         {
-            while (SDL_PollEvent(&app.event) != 0)
-            {
-                if (app.event.type == SDL_QUIT)
-                {
-                    app.is_running = false;
-                }
-            }
+            if (AppUpdateState(&app, &gfx) != APP_SUCCESS)
+                break;
 
             if (AppDraw(&app, &gfx) != APP_SUCCESS)
                 break;
