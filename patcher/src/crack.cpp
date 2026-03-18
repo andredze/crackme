@@ -49,7 +49,7 @@ AppErr_t MakePatch(AppCtx_t* app, GraphicsCtx_t* gfx)
     }
 
     if (CRACKME_HASH != CountHash(app->crack_input.buffer_data.buffer,
-                                     app->crack_input.input_file_info.size))
+                                  app->crack_input.input_file_info.size))
     {
         PRINTERR("This file is not crackme.com that I'm hacking");
 

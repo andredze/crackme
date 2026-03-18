@@ -17,7 +17,7 @@
 
 const int DEFAULT_SOUND_FREQUENCY = 44100;
 const int HARDWARE_CHANNELS_COUNT = 2;      // stereo
-const int AUDIO_SAMPLE_SIZE       = 2048;   // audio chunk size
+const int AUDIO_SAMPLE_SIZE       = 4096;   // audio chunk size
 
 const double EPSILON = 0.00000000000000001;
 

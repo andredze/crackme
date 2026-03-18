@@ -410,6 +410,8 @@ AppErr_t AppLoadMedia(AppCtx_t* app, GraphicsCtx_t* gfx)
         }
     }
 
+    Mix_PlayMusic(gfx->themes[gfx->curr_theme].music, -1);
+
     gfx->font = TTF_OpenFont(FONT_FILE_PATH, FONT_SIZE);
 
     if (gfx->font == NULL)
@@ -576,8 +578,6 @@ static AppErr_t AppUpdateMainMenu(AppCtx_t* app, GraphicsCtx_t* gfx)
         if (make_delay)
             return APP_SUCCESS;
 
-        Mix_HaltMusic();
-
         gfx->curr_theme += 1;
         gfx->curr_theme %= (int) THEMES_COUNT;
 
@@ -593,6 +593,29 @@ static AppErr_t AppUpdateMainMenu(AppCtx_t* app, GraphicsCtx_t* gfx)
 
 //------------------------------------------------------------------//
 
+static AppErr_t AppUpdateScreen(AppCtx_t* app, GraphicsCtx_t* gfx)
+{
+    assert(app);
+    assert(gfx);
+
+    AppErr_t error = APP_SUCCESS;
+
+    if (app->state == APP_STATE_LOADING_SCREEN)
+    {
+        if ((error = AppUpdateLoadingScreen(app, gfx)))
+            return error;
+    }
+    else
+    {
+        if ((error = AppUpdateMainMenu(app, gfx)))
+            return error;
+    }
+
+    return APP_SUCCESS;
+}
+
+//------------------------------------------------------------------//
+
 AppErr_t AppUpdateState(AppCtx_t* app, GraphicsCtx_t* gfx)
 {
     assert(app);
@@ -600,23 +623,26 @@ AppErr_t AppUpdateState(AppCtx_t* app, GraphicsCtx_t* gfx)
 
     AppErr_t error = APP_SUCCESS;
 
+    bool entered_while = false;
+
     while (SDL_PollEvent(&app->event) != 0)
     {
+        entered_while = true;
+
         if (app->event.type == SDL_QUIT)
         {
             app->is_running = false;
         }
-        if (app->state == APP_STATE_LOADING_SCREEN)
-        {
-            if ((error = AppUpdateLoadingScreen(app, gfx)))
-                return error;
-        }
-        else
-        {
-            if ((error = AppUpdateMainMenu(app, gfx)))
-                return error;
-        }
+
+        if ((error = AppUpdateScreen(app, gfx)))
+            return error;
     }
+
+    if (entered_while)
+        return APP_SUCCESS;
+
+    if ((error = AppUpdateScreen(app, gfx)))
+        return error;
 
     return APP_SUCCESS;
 }
@@ -742,11 +768,6 @@ AppErr_t AppDraw(AppCtx_t* app, GraphicsCtx_t* gfx)
 {
     assert(app);
     assert(gfx);
-
-    if (Mix_PlayingMusic() == 0)
-    {
-        Mix_PlayMusic(gfx->themes[gfx->curr_theme].music, -1); // -1 == loop music
-    }
 
     SDL_RenderClear(gfx->rend);
 
