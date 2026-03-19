@@ -436,7 +436,7 @@ AppErr_t AppLoadMedia(AppCtx_t* app, GraphicsCtx_t* gfx)
 
 //——————————————————————————————————————————————————————————————————————————————————————————
 
-static inline bool AppMouseIsInsideButton(GraphicsCtx_t* gfx, ButtonCtx_t* button)
+static bool AppMouseIsInsideButton(GraphicsCtx_t* gfx, ButtonCtx_t* button)
 {
     assert(gfx);
     assert(button);
@@ -517,7 +517,7 @@ static AppErr_t AppUpdateLoadingScreen(AppCtx_t* app, GraphicsCtx_t* gfx)
     assert(app);
     assert(gfx);
 
-    if (gfx->load_screen.progress_bar.progress >= 100)
+    if (gfx->load_screen.progress_bar.progress >= 110)
     {
         app->state = APP_STATE_MAIN_MENU;
 

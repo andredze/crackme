@@ -60,14 +60,14 @@ AppErr_t MakePatch(AppCtx_t* app, GraphicsCtx_t* gfx)
         return APP_WRONG_FILE;
     }
 
-    printf("hash = %zu\n", CountHash(app->crack_input.buffer_data.buffer,
+    DPRINTF("hash = %zx\n", CountHash(app->crack_input.buffer_data.buffer,
                                      app->crack_input.input_file_info.size));
 
     app->crack_input.buffer_data.buffer[PATCH_ADDRESS]     = NOP_BYTECODE;
     app->crack_input.buffer_data.buffer[PATCH_ADDRESS + 1] = NOP_BYTECODE;
 
     DPRINTF("Wrote nops\n");
-    printf("cracked hash = %zu\n", CountHash(app->crack_input.buffer_data.buffer,
+    DPRINTF("cracked hash = %zx\n", CountHash(app->crack_input.buffer_data.buffer,
                                              app->crack_input.input_file_info.size));
 
     if (fwrite(app->crack_input.buffer_data.buffer,
