@@ -517,23 +517,25 @@ static AppErr_t AppUpdateLoadingScreen(AppCtx_t* app, GraphicsCtx_t* gfx)
     assert(app);
     assert(gfx);
 
-    if (gfx->load_screen.progress_bar.progress >= 110)
+    bool is_on_cooldown = AppIsOnCooldown(&gfx->load_screen.last_ticks, LOADING_SCREEN_FRAME_TIME);
+    
+    if (is_on_cooldown)
     {
-        app->state = APP_STATE_MAIN_MENU;
-
-        gfx->load_screen.progress_bar.progress = 0;
-        gfx->load_screen.cur_message_number    = 0;
-
         return APP_SUCCESS;
     }
 
-    bool is_on_cooldown = AppIsOnCooldown(&gfx->load_screen.last_ticks, LOADING_SCREEN_FRAME_TIME);
-
-    if (!is_on_cooldown)
+    if (gfx->load_screen.progress_bar.progress >= 100)
     {
-        gfx->load_screen.progress_bar.progress += 10;
-        gfx->load_screen.cur_message_number    += 1;
+        app->state = APP_STATE_MAIN_MENU;
+    
+        gfx->load_screen.progress_bar.progress = 0;
+        gfx->load_screen.cur_message_number    = 0;
+    
+        return APP_SUCCESS;
     }
+
+    gfx->load_screen.progress_bar.progress += 10;
+    gfx->load_screen.cur_message_number    += 1;
 
     return APP_SUCCESS;
 }
@@ -753,6 +755,13 @@ static void RenderLoadingScreen(AppCtx_t* app, GraphicsCtx_t* gfx)
                    gfx->load_screen.title.texture,
                    NULL,
                    &gfx->load_screen.title.text_rect);
+
+    if (gfx->load_screen.cur_message_number >= LOAD_MESSAGES_COUNT)
+    {
+        PRINTERR("Error: cur_message_number = %zu (too big)\n", 
+                 gfx->load_screen.cur_message_number);
+        return;
+    }
 
     SDL_RenderCopy(gfx->rend,
                    gfx->load_screen.messages[gfx->load_screen.cur_message_number].texture,
